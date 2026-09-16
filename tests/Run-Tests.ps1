@@ -1,4 +1,5 @@
 #Requires -Version 5.1
+#Requires -RunAsAdministrator
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 $root = Split-Path $PSScriptRoot -Parent
@@ -45,9 +46,9 @@ try {
     $result = [FalconPreflight.NetworkProbe]::Test('localhost', $server.Port, $loopback, $null, 250, $false)
     Assert-True (-not $result.Success -and $result.Stage -eq 'TLS' -and $result.ElapsedMs -lt 4000) 'Silent TLS server times out'
 } finally { $server.Dispose() }
-# Create a disposable localhost certificate. Only tests modify the current-user certificate stores.
+# Create a disposable localhost certificate. Only tests modify certificate stores; the machine root store avoids interactive trust prompts.
 $certificate = New-SelfSignedCertificate -DnsName 'localhost' -CertStoreLocation 'Cert:\CurrentUser\My' -NotAfter (Get-Date).AddDays(1)
-$store = New-Object Security.Cryptography.X509Certificates.X509Store 'Root', 'CurrentUser'
+$store = New-Object Security.Cryptography.X509Certificates.X509Store 'Root', 'LocalMachine'
 try {
     $server = New-Object PreflightTestServer -ArgumentList $certificate, 'tls'
     try {

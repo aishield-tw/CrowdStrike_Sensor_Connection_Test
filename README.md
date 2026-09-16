@@ -128,7 +128,7 @@ GitHub Actions 在 Windows runner 上，分別使用 Windows PowerShell 5.1 和 
 .\tests\Run-Tests.ps1
 ```
 
-測試涵蓋：區域端點與選用項目、非法主機名稱、分層結果／退出碼、Proxy 407、TLS 逾時、不受信任憑證、正確 TLS 1.2、CONNECT 後的 TLS，以及憑證主機名稱不符。測試建立短效 localhost 憑證，暫存於目前使用者 My/Root store，並在 finally 移除；請在開發或 CI 環境執行。
+測試涵蓋：區域端點與選用項目、非法主機名稱、分層結果／退出碼、Proxy 407、TLS 逾時、不受信任憑證、正確 TLS 1.2、CONNECT 後的 TLS，以及憑證主機名稱不符。測試需以管理員身分執行，建立短效 localhost 憑證，暫存於 CurrentUser/My 與 LocalMachine/Root store，並在 finally 移除。使用 Machine Root 可避免 CurrentUser Root 匯入時跳出互動確認而卡住 CI。請只在開發或 CI 環境執行；正式連線工具不需要管理員權限，也不修改憑證存放區。
 
 ## 資料來源
 
