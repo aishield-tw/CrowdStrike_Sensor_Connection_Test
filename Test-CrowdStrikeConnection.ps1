@@ -10,7 +10,7 @@ Tests network prerequisites for CrowdStrike Falcon Sensor on Windows.
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('US-1', 'US-2', 'EU-1')][string]$Cloud,
+    [ValidateSet('US-1', 'US-2', 'US-3', 'EU-1')][string]$Cloud,
     [ValidateSet('Auto', 'Direct')][string]$ConnectionMode = 'Auto',
     [ValidateRange(1, 60)][int]$TimeoutSeconds = 10,
     [switch]$CheckRevocation,
@@ -38,6 +38,8 @@ try {
     Write-Host "CrowdStrike pre-deployment connectivity test | Cloud=$Cloud | Mode=$ConnectionMode"
     Write-Host 'Checks TLS 1.2 with certificate validation. Does not change system settings.'
     Write-Host 'PASS is a network result, not proof of Sensor registration or absence of TLS inspection.'
+    $profileNote = if ($Cloud -eq 'US-3') { 'US-3 baseline includes two publicly documented hosts only. Confirm the full Windows Sensor allowlist in your tenant deployment guide; add other required hosts with AdditionalHost.' } else { 'Confirm the complete endpoint list in your tenant deployment guide.' }
+    Write-Host $profileNote -ForegroundColor Yellow
     $milliseconds = $TimeoutSeconds * 1000
     foreach ($target in $targets) {
         Write-Host "Testing $($target.Hostname) ..."
@@ -80,17 +82,18 @@ try {
     }
     $exitCode = Get-PreflightExitCode -Results $results.ToArray()
     $report = [ordered]@{
-        SchemaVersion = 1; ToolVersion = '1.0.0'; GeneratedAtUtc = [DateTime]::UtcNow.ToString('o')
+        SchemaVersion = 1; ToolVersion = '1.1.0'; GeneratedAtUtc = [DateTime]::UtcNow.ToString('o')
         ComputerName = $env:COMPUTERNAME; OS = [Environment]::OSVersion.VersionString
         PowerShellVersion = $PSVersionTable.PSVersion.ToString(); Is64BitProcess = [Environment]::Is64BitProcess
         Cloud = $Cloud; ConnectionMode = $ConnectionMode; TimeoutSeconds = $TimeoutSeconds
         RevocationChecked = $CheckRevocation.IsPresent; ProxyInventory = $proxyInventory
+        EndpointProfileNote = $profileNote
         ExitCode = $exitCode; Results = $results.ToArray()
         Limitations = @('Generic TLS 1.2 probe; does not emulate Sensor certificate pinning or client authentication.', 'Auto uses current process .NET system proxy; Sensor service and WinHTTP configuration may differ.', 'PASS does not establish Sensor registration, supported OS/KBs, or absence of TLS interception.', 'Revocation is only requested when CheckRevocation is set; OS cache and policy apply.')
     }
     $report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath "$reportBase.json" -Encoding UTF8
     $results | Select-Object Hostname, Category, Required, Status, Route, @{Name='DNS';Expression={$_.DNS -join ';'}}, DNSError, @{Name='Details';Expression={($_.Attempts | ForEach-Object { "$($_.Address) $($_.Stage) $($_.Error)" }) -join ' | '}} | Export-Csv -LiteralPath "$reportBase.csv" -NoTypeInformation -Encoding UTF8
-    $textReport = @("CrowdStrike pre-deployment connectivity test", "Cloud: $Cloud | Mode: $ConnectionMode | ExitCode: $exitCode", ($results | Format-Table Hostname, Status, Route -AutoSize | Out-String -Width 240), ($results | ForEach-Object { $_.Attempts | Format-List * | Out-String -Width 240 }), $report.Limitations)
+    $textReport = @("CrowdStrike pre-deployment connectivity test", "Cloud: $Cloud | Mode: $ConnectionMode | ExitCode: $exitCode", ($results | Format-Table Hostname, Status, Route -AutoSize | Out-String -Width 240), ($results | ForEach-Object { $_.Attempts | Format-List * | Out-String -Width 240 }), $profileNote, $report.Limitations)
     $textReport | Set-Content -LiteralPath "$reportBase.txt" -Encoding UTF8
     Write-Host "Reports: $reportBase.[json|csv|txt]"
     Write-Host "Exit code: $exitCode (0=network checks passed, 1=required endpoint failed, 2=review warnings, 3=tool error)"

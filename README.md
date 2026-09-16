@@ -22,6 +22,7 @@ powershell.exe -NoProfile -File .\Test-CrowdStrikeConnection.ps1 -Cloud US-2
 | --- | --- |
 | `falcon.crowdstrike.com` | `US-1` |
 | `falcon.us-2.crowdstrike.com` | `US-2` |
+| `falcon.us-3.crowdstrike.com` | `US-3` |
 | `falcon.eu-1.crowdstrike.com` | `EU-1` |
 
 Cloud 必須明確指定，未指定時 PowerShell 會提示輸入。政府雲、其他區域與特殊租戶端點未內建，請勿套用其他區域後據此判定通過。
@@ -46,7 +47,10 @@ Cloud 必須明確指定，未指定時 PowerShell 會提示輸入。政府雲�
 | --- | --- | --- | --- |
 | US-1 | `ts01-b.cloudsink.net` | `lfodown01-b.cloudsink.net` | `lfoup01-b.cloudsink.net` |
 | US-2 | `ts01-gyr-maverick.cloudsink.net` | `lfodown01-gyr-maverick.cloudsink.net` | `lfoup01-gyr-maverick.cloudsink.net` |
+| US-3 | `ts01.us-3.cloudsink.net` | `lfodown01.us-3.cloudsink.net` | 尚未取得官方公開依據，依租戶文件補充 |
 | EU-1 | `ts01-lanner-lion.cloudsink.net` | `lfodown01-lanner-lion.cloudsink.net` | `lfoup01-lanner-lion.cloudsink.net` |
+
+**US-3 目前內建兩個已由官方公開文件確認的基礎端點，不是完整 Windows Sensor 白名單。** US-3 採用點號分隔的主機名稱，沒有沿用 US-1／US-2 的連字號規則。上傳端點需從該租戶文件確認後以 `-AdditionalHost` 加入，不根據其他區域的命名推測。執行畫面與 JSON/TXT 報告都會標示此範圍。
 
 上述 Sensor 端點使用對外 TCP 443。本清單為公開文件中的基礎端點，不保證涵蓋所有模組、租戶或後續變更。部署前仍應以該租戶 Falcon Console 的 **Sensor Deployment / Network Requirements** 為準。
 
@@ -55,6 +59,9 @@ Cloud 必須明確指定，未指定時 PowerShell 會提示輸入。政府雲�
 ## 使用範例
 
 ```powershell
+# US-3 基礎端點
+.\Test-CrowdStrikeConnection.ps1 -Cloud US-3
+
 # 預設：偵測並使用既有系統 Proxy，或按系統設定直連
 .\Test-CrowdStrikeConnection.ps1 -Cloud US-2
 
@@ -67,7 +74,7 @@ Cloud 必須明確指定，未指定時 PowerShell 會提示輸入。政府雲�
 # 同時檢查管理介面，指定報告目錄
 .\Test-CrowdStrikeConnection.ps1 -Cloud EU-1 -IncludeConsole -OutputDirectory C:\Temp\FalconPreflight
 
-# 加入租戶文件指定的其他主機；仍會測試原本區域的三個端點
+# 加入租戶文件指定的其他主機；仍會測試原本區域的內建端點
 .\Test-CrowdStrikeConnection.ps1 -Cloud US-2 -AdditionalHost 'tenant-endpoint.example.com'
 ```
 
@@ -135,7 +142,8 @@ GitHub Actions 在 Windows runner 上，分別使用 Windows PowerShell 5.1 和 
 核對日期：2026-09-16。
 
 - [Dell：CrowdStrike Falcon Sensor System Requirements](https://www.dell.com/support/kbdoc/en-us/000177899/crowdstrike-falcon-sensor-system-requirements)：三個區域的公開 Sensor 主機與 TCP 443 / TLS 1.2 要求。此文件的舊 OS 清單不作為現行版本支援判定。
-- [CrowdStrike：Falcon Helm / Falcon Admission Controller](https://github.com/CrowdStrike/falcon-helm/blob/main/helm-charts/falcon-kac/README.md)：交叉核對通訊及下載端點；其產品部署範圍不同，不能直接當作 Windows Sensor 完整白名單。
+- [CrowdStrike：Falcon Helm / Falcon Admission Controller](https://github.com/CrowdStrike/falcon-helm/blob/main/helm-charts/falcon-kac/README.md)：US-3 通訊及下載端點的公開依據，並交叉核對其他區域；其產品部署範圍不同，不能直接當作 Windows Sensor 完整白名單。
+- [CrowdStrike：FalconPy BaseURL](https://github.com/CrowdStrike/falconpy/blob/main/src/falconpy/_enum/_base_url.py)：確認 US-3 API 網址。
 - [Microsoft：SslStream.AuthenticateAsClientAsync](https://learn.microsoft.com/en-us/dotnet/api/system.net.security.sslstream.authenticateasclientasync)：TLS 協定與憑證驗證 API。
 
 本專案為 AIShield 的部署輔助工具，非 CrowdStrike 官方驗證工具。沿用 repository 既有 Apache-2.0 授權。

@@ -21,6 +21,17 @@ foreach ($cloud in @('US-1','US-2','EU-1')) {
     $targets = @(Get-PreflightTargets -Cloud $cloud)
     Assert-True ($targets.Count -eq 3 -and @($targets | Where-Object { -not $_.Required }).Count -eq 0) "$cloud sensor targets"
 }
+$us3 = @(Get-PreflightTargets -Cloud US-3)
+Assert-True (($us3.Hostname -join ',') -eq 'ts01.us-3.cloudsink.net,lfodown01.us-3.cloudsink.net') 'US-3 uses explicit dot-separated public baseline endpoints'
+Assert-True (@($us3 | Where-Object { -not $_.Required }).Count -eq 0) 'US-3 baseline endpoints are required'
+$us3Console = @(Get-PreflightTargets -Cloud US-3 -IncludeConsole)
+Assert-True ($us3Console.Count -eq 4 -and @($us3Console | Where-Object { -not $_.Required }).Count -eq 2 -and $us3Console.Hostname -contains 'api.us-3.crowdstrike.com' -and $us3Console.Hostname -contains 'falcon.us-3.crowdstrike.com') 'US-3 optional console/API targets'
+$us3Additional = @(Get-PreflightTargets -Cloud US-3 -AdditionalHost 'tenant-endpoint.example.com')
+Assert-True ($us3Additional.Count -eq 3 -and $us3Additional[2].Required) 'US-3 supports required tenant-specific endpoints'
+$entryAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $root 'Test-CrowdStrikeConnection.ps1'), [ref]$null, [ref]$null)
+$cloudParameter = $entryAst.ParamBlock.Parameters | Where-Object { $_.Name.VariablePath.UserPath -eq 'Cloud' }
+$cloudValues = $cloudParameter.Attributes | Where-Object { $_.TypeName.Name -eq 'ValidateSet' }
+Assert-True (@($cloudValues.PositionalArguments | ForEach-Object { $_.Value }) -contains 'US-3') 'CLI accepts US-3'
 $extra = @(Get-PreflightTargets -Cloud US-2 -IncludeConsole -AdditionalHost 'example.com')
 Assert-True ($extra.Count -eq 6 -and @($extra | Where-Object { -not $_.Required }).Count -eq 2) 'Optional console/API and required additional target'
 foreach ($name in @('https://example.com', '*.example.com', 'example.com:443', 'bad.example.com/path', "bad.example.com`r`nInjected")) {

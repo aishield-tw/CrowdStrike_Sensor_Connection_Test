@@ -6,13 +6,18 @@ function Initialize-Probe {
 }
 function Get-PreflightTargets {
     param([string]$Cloud, [switch]$IncludeConsole, [string[]]$AdditionalHost)
-    $suffixes = @{ 'US-1' = 'b'; 'US-2' = 'gyr-maverick'; 'EU-1' = 'lanner-lion' }
-    if (-not $suffixes.ContainsKey($Cloud)) { throw "Unsupported cloud: $Cloud" }
-    foreach ($prefix in @('ts01', 'lfodown01', 'lfoup01')) {
-        [pscustomobject]@{ Hostname = "$prefix-$($suffixes[$Cloud]).cloudsink.net"; Required = $true; Category = 'Sensor' }
+    $sensorHosts = @{
+        'US-1' = @('ts01-b.cloudsink.net', 'lfodown01-b.cloudsink.net', 'lfoup01-b.cloudsink.net')
+        'US-2' = @('ts01-gyr-maverick.cloudsink.net', 'lfodown01-gyr-maverick.cloudsink.net', 'lfoup01-gyr-maverick.cloudsink.net')
+        'US-3' = @('ts01.us-3.cloudsink.net', 'lfodown01.us-3.cloudsink.net')
+        'EU-1' = @('ts01-lanner-lion.cloudsink.net', 'lfodown01-lanner-lion.cloudsink.net', 'lfoup01-lanner-lion.cloudsink.net')
+    }
+    if (-not $sensorHosts.ContainsKey($Cloud)) { throw "Unsupported cloud: $Cloud" }
+    foreach ($name in $sensorHosts[$Cloud]) {
+        [pscustomobject]@{ Hostname = $name; Required = $true; Category = 'Sensor' }
     }
     if ($IncludeConsole) {
-        $domain = switch ($Cloud) { 'US-1' { 'crowdstrike.com' }; 'US-2' { 'us-2.crowdstrike.com' }; 'EU-1' { 'eu-1.crowdstrike.com' } }
+        $domain = switch ($Cloud) { 'US-1' { 'crowdstrike.com' }; 'US-2' { 'us-2.crowdstrike.com' }; 'US-3' { 'us-3.crowdstrike.com' }; 'EU-1' { 'eu-1.crowdstrike.com' } }
         foreach ($name in @("falcon.$domain", "api.$domain")) {
             [pscustomobject]@{ Hostname = $name; Required = $false; Category = 'Console/API' }
         }
